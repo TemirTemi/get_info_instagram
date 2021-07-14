@@ -1,38 +1,68 @@
 from instabot import Bot
-
-bot = Bot()
-bot.login(username="tewovam682", password="Admin1234")
-
-USERNAME = bot.search_users('temirla aktay')[0]
-
-user_following = bot.get_user_following(USERNAME)
-user_followers = bot.get_user_followers(USERNAME)
-
-total_medias = bot.get_total_user_medias(USERNAME)
-twony_last_medias = bot.get_user_medias(USERNAME, filtration=None)
-
-location = []
-avr_likers = []
-twony_avr_likers = []
-location = {}
-if total_medias:
-    for i in range(len(total_medias)):
-        liked = bot.get_media_likers(total_medias[i])
-        avr_likers.append(len(liked))
-    avr_likers = sum(avr_likers) / len(avr_likers)
-
-if twony_last_medias:
-    for media in twony_last_medias:
-        liked = bot.get_media_likers(media)
-        twony_avr_likers.append(len(liked))
-    twony_avr_likers = sum(twony_avr_likers) / len(twony_avr_likers)
+import requests
 
 
-print('total_avr_likers', avr_likers)
-print('twony_avr_likers', twony_avr_likers)
-print('following', len(user_following))
-print('followers', len(user_followers))
-print('media_count', len(total_medias))
-print('all_location', location)
+class ChildBot():
+    def __init__(self, username, password):
+        self.bot = Bot()
+        self.bot.login(username=username, password=password)
 
-bot.logout()
+    def get_username(self, full_name, n=0):
+        username = self.bot.search_users(full_name)[n]
+        return username
+
+    def get_follwoing_len(self, username):
+        return len(self.bot.get_user_following(username))
+
+    def get_followers_len(self, username):
+        return len(self.bot.get_user_followers(username))
+
+    def get_total_len_medias(self, username):
+        return len(self.bot.get_total_user_medias(username))
+
+    def get_avr_likers(self, username):
+        avr_likers = []
+        total_medias = self.bot.get_total_user_medias(username)
+        if total_medias:
+            for i in range(len(total_medias)):
+                liked = self.bot.get_media_likers(total_medias[i])
+                avr_likers.append(len(liked))
+            avr_likers = sum(avr_likers) / len(avr_likers)
+        return avr_likers
+
+    def get_20_avr_likers(self, username):
+        twony_last_medias = self.bot.get_user_medias(username, filtration=None)
+        twony_avr_likers = []
+        if twony_last_medias:
+            for media in twony_last_medias:
+                liked = self.bot.get_media_likers(media)
+                twony_avr_likers.append(len(liked))
+            twony_avr_likers = sum(twony_avr_likers) / len(twony_avr_likers)
+        return twony_avr_likers
+
+    def download_photo(self, media_id, filename):
+        media = self.bot.get_media_info(media_id)[0]
+        if "image_versions2" in media.keys():
+            url = media["image_versions2"]["candidates"][0]["url"]
+            response = requests.get(url)
+            with open(filename + ".jpg", "wb") as f:
+                response.raw.decode_content = True
+                f.write(response.content)
+        elif "carousel_media" in media.keys():
+            for e, element in enumerate(media["carousel_media"]):
+                url = element['image_versions2']["candidates"][0]["url"]
+                response = requests.get(url)
+                with open(filename + str(e) + ".jpg", "wb") as f:
+                    response.raw.decode_content = True
+                    f.write(response.content)
+
+    def download_last_5_posts(self, username):
+        twony_last_medias = self.bot.get_user_medias(username, filtration=None)
+        for e, media_id in enumerate(twony_last_medias):
+            self.download_photo(media_id, "img_" + str(e))
+
+
+user = ChildBot(username="tewovam682", password="Admin1234")
+print(user.get_avr_likers('temir_temi'))
+print(user.get_total_len_medias('temir_temi'))
+user.download_last_5_posts('temir_temi')
